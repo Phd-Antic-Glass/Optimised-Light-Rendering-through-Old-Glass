@@ -337,6 +337,233 @@ public:
         return true;
     }
 
+    Mask compute_step_anglediff(const Point3f &x0, const EmitterInteraction &ei) {
+        std::vector<ManifoldVertex> &v = m_current_path;
+        bool success = true;
+        size_t k = v.size();
+        for (size_t i = 0; i < k; ++i) {
+            v[i].C = Vector2f(0.f);
+            v[i].dC_dx_prev = Matrix2f(0.f);
+            v[i].dC_dx_cur  = Matrix2f(0.f);
+            v[i].dC_dx_next = Matrix2f(0.f);
+
+            Point3f x_prev = (i == 0)   ? x0   : v[i-1].p;
+            Point3f x_next = (i == k-1) ? ei.p : v[i+1].p;
+            Point3f x_cur  = v[i].p;
+
+            bool at_endpoint_with_fixed_direction = (i == (k-1) && ei.is_directional());
+
+            // Setup wi / wo
+            Vector3f wo;
+            if (at_endpoint_with_fixed_direction) {
+                // Case of fixed 'wo' direction
+                wo = ei.d;
+            } else {
+                // Standard case for fixed emitter position
+                wo = x_next - x_cur;
+            }
+            Float ilo = norm(wo);
+            if (ilo < 1e-3f) {
+                return false;
+            }
+            ilo = rcp(ilo);
+            wo *= ilo;
+
+            Vector3f dwo_du_cur, dwo_dv_cur;
+            if (at_endpoint_with_fixed_direction) {
+                // Fixed 'wo' direction means its derivative must be zero
+                dwo_du_cur = Vector3f(0.f);
+                dwo_dv_cur = Vector3f(0.f);
+            } else {
+                // Standard case for fixed emitter position
+                dwo_du_cur = -ilo * (v[i].dp_du - wo*dot(wo, v[i].dp_du));
+                dwo_dv_cur = -ilo * (v[i].dp_dv - wo*dot(wo, v[i].dp_dv));
+            }
+
+            Vector3f wi = x_prev - x_cur;
+            Float ili = norm(wi);
+            if (ili < 1e-3f) {
+                return false;
+            }
+            ili = rcp(ili);
+            wi *= ili;
+
+            Vector3f dwi_du_cur = -ili * (v[i].dp_du - wi*dot(wi, v[i].dp_du)),
+                     dwi_dv_cur = -ili * (v[i].dp_dv - wi*dot(wi, v[i].dp_dv));
+
+            // Set up constraint function and its derivatives
+            bool success_i = false;
+
+            auto transform = [&](const Vector3f &w, const Vector3f &n, Float eta) {
+                if (eta == 1.f) {
+                    return SpecularManifold::reflect(w, n);
+                } else {
+                    return SpecularManifold::refract(w, n, eta);
+                }
+            };
+            auto d_transform = [&](const Vector3f &w, const Vector3f &dw_du, const Vector3f &dw_dv,
+                    const Vector3f &n, const Vector3f &dn_du, const Vector3f &dn_dv,
+                    Float eta) {
+                if (eta == 1.f) {
+                    return SpecularManifold::d_reflect(w, dw_du, dw_dv, n, dn_du, dn_dv);
+                } else {
+                    return SpecularManifold::d_refract(w, dw_du, dw_dv, n, dn_du, dn_dv, eta);
+                }
+            };
+
+            // Handle offset normal. These are no-ops in case n_offset=[0,0,1]
+            Vector3f n_offset = m_offset_normals[i];
+            Normal3f n = v[i].s * n_offset[0] +
+                v[i].t * n_offset[1] +
+                v[i].n * n_offset[2];
+            Vector3f dn_du = v[i].ds_du * n_offset[0] +
+                v[i].dt_du * n_offset[1] +
+                v[i].dn_du * n_offset[2];
+            Vector3f dn_dv = v[i].ds_dv * n_offset[0] +
+                v[i].dt_dv * n_offset[1] +
+                v[i].dn_dv * n_offset[2];
+
+            auto [valid_i_refr_i, wio] = transform(wi, n, v[i].eta);
+            if (valid_i_refr_i) {
+                auto [to, po]   = SpecularManifold::sphcoords(wo);
+                auto [tio, pio] = SpecularManifold::sphcoords(wio);
+
+                Float dt = to - tio,
+                      dp = po - pio;
+                if (dp < -math::Pi<Float>) {
+                    dp += 2.f*math::Pi<Float>;
+                } else if (dp > math::Pi<Float>) {
+                    dp -= 2.f*math::Pi<Float>;
+                }
+                v[i].C = Vector2f(dt, dp);
+
+                Float dto_du, dpo_du, dto_dv, dpo_dv;
+                Float dtio_du, dpio_du, dtio_dv, dpio_dv;
+
+                // Derivative of specular constraint w.r.t. x_{i-1}
+                if (i > 0) {
+                    Vector3f dwi_du_prev = ili * (v[i-1].dp_du - wi*dot(wi, v[i-1].dp_du)),
+                             dwi_dv_prev = ili * (v[i-1].dp_dv - wi*dot(wi, v[i-1].dp_dv));
+                    // Vector3f dwo_du_prev = ilo * (v[i-1].dp_du - wo*dot(wo, v[i-1].dp_du)),  // = 0
+                    //          dwo_dv_prev = ilo * (v[i-1].dp_dv - wo*dot(wo, v[i-1].dp_dv));  // = 0
+                    auto [dwio_du_prev, dwio_dv_prev] = d_transform(wi, dwi_du_prev, dwi_dv_prev, n, Vector3f(0.f), Vector3f(0.f), v[i].eta);   // Possible optimization: specific implementation here that already knows some of these are 0.
+
+                    // std::tie(dto_du, dpo_du, dto_dv, dpo_dv)     = SpecularManifold::d_sphcoords(wo, dwo_du_prev, dwo_dv_prev);  // = 0
+                    std::tie(dtio_du, dpio_du, dtio_dv, dpio_dv) = SpecularManifold::d_sphcoords(wio, dwio_du_prev, dwio_dv_prev);
+
+                    v[i].dC_dx_prev(0,0) = -dtio_du;
+                    v[i].dC_dx_prev(1,0) = -dpio_du;
+                    v[i].dC_dx_prev(0,1) = -dtio_dv;
+                    v[i].dC_dx_prev(1,1) = -dpio_dv;
+                }
+
+                // Derivative of specular constraint w.r.t. x_{i}
+                auto [dwio_du_cur, dwio_dv_cur] = d_transform(wi, dwi_du_cur, dwi_dv_cur, n, dn_du, dn_dv, v[i].eta);
+
+                std::tie(dto_du, dpo_du, dto_dv, dpo_dv)     = SpecularManifold::d_sphcoords(wo, dwo_du_cur, dwo_dv_cur);
+                std::tie(dtio_du, dpio_du, dtio_dv, dpio_dv) = SpecularManifold::d_sphcoords(wio, dwio_du_cur, dwio_dv_cur);
+
+                v[i].dC_dx_cur(0,0) = dto_du - dtio_du;
+                v[i].dC_dx_cur(1,0) = dpo_du - dpio_du;
+                v[i].dC_dx_cur(0,1) = dto_dv - dtio_dv;
+                v[i].dC_dx_cur(1,1) = dpo_dv - dpio_dv;
+
+                // Derivative of specular constraint w.r.t. x_{i+1}
+                if (i < k-1) {
+                    // Vector3f dwi_du_next = ili * (v[i+1].dp_du - wi*dot(wi, v[i+1].dp_du)),  // = 0
+                    //          dwi_dv_next = ili * (v[i+1].dp_dv - wi*dot(wi, v[i+1].dp_dv));  // = 0
+                    Vector3f dwo_du_next = ilo * (v[i+1].dp_du - wo*dot(wo, v[i+1].dp_du)),
+                             dwo_dv_next = ilo * (v[i+1].dp_dv - wo*dot(wo, v[i+1].dp_dv));
+                    // auto [dwio_du_next, dwio_dv_next] = d_transform(wi, dwi_du_next, dwi_dv_next, n, Vector3f(0.f), Vector3f(0.f), v[i].eta); // = 0
+
+                    std::tie(dto_du, dpo_du, dto_dv, dpo_dv) = SpecularManifold::d_sphcoords(wo, dwo_du_next, dwo_dv_next);
+                    // std::tie(dtio_du, dpio_du, dtio_dv, dpio_dv) = SpecularManifold::d_sphcoords(wio, dwio_du_next, dwio_dv_next);   // = 0
+
+                    v[i].dC_dx_next(0,0) = dto_du;
+                    v[i].dC_dx_next(1,0) = dpo_du;
+                    v[i].dC_dx_next(0,1) = dto_dv;
+                    v[i].dC_dx_next(1,1) = dpo_dv;
+                }
+
+                success_i = true;
+            }
+
+            auto [valid_o_refr_o, woi] = transform(wo, n, v[i].eta);
+            if (valid_o_refr_o && !success_i) {
+                auto [ti, pi]   = SpecularManifold::sphcoords(wi);
+                auto [toi, poi] = SpecularManifold::sphcoords(woi);
+
+                Float dt = ti - toi,
+                      dp = pi - poi;
+                if (dp < -math::Pi<Float>) {
+                    dp += 2.f*math::Pi<Float>;
+                } else if (dp > math::Pi<Float>) {
+                    dp -= 2.f*math::Pi<Float>;
+                }
+                v[i].C = Vector2f(dt, dp);
+
+                Float dti_du, dpi_du, dti_dv, dpi_dv;
+                Float dtoi_du, dpoi_du, dtoi_dv, dpoi_dv;
+
+                // Derivative of specular constraint w.r.t. x_{i-1}
+                if (i > 0) {
+                    Vector3f dwi_du_prev = ili * (v[i-1].dp_du - wi*dot(wi, v[i-1].dp_du)),
+                             dwi_dv_prev = ili * (v[i-1].dp_dv - wi*dot(wi, v[i-1].dp_dv));
+                    // Vector3f dwo_du_prev = ilo * (v[i-1].dp_du - wo*dot(wo, v[i-1].dp_du)),  // = 0
+                    // dwo_dv_prev = ilo * (v[i-1].dp_dv - wo*dot(wo, v[i-1].dp_dv));  // = 0
+                    // auto [dwoi_du_prev, dwoi_dv_prev] = d_transform(wo, dwo_du_prev, dwo_dv_prev, n, Vector3f(0.f), Vector3f(0.f), v[i].eta);   // = 0
+
+                    std::tie(dti_du, dpi_du, dti_dv, dpi_dv) = SpecularManifold::d_sphcoords(wi, dwi_du_prev, dwi_dv_prev);
+                    // std::tie(dtoi_du, dpoi_du, dtoi_dv, dpoi_dv) = SpecularManifold::d_sphcoords(woi, dwoi_du_prev, dwoi_dv_prev);   // = 0
+
+                    v[i].dC_dx_prev(0,0) = dti_du;
+                    v[i].dC_dx_prev(1,0) = dpi_du;
+                    v[i].dC_dx_prev(0,1) = dti_dv;
+                    v[i].dC_dx_prev(1,1) = dpi_dv;
+                }
+
+
+                // Derivative of specular constraint w.r.t. x_{i}
+                auto [dwoi_du_cur, dwoi_dv_cur] = d_transform(wo, dwo_du_cur, dwo_dv_cur, n, dn_du, dn_dv, v[i].eta);
+
+                std::tie(dti_du, dpi_du, dti_dv, dpi_dv)     = SpecularManifold::d_sphcoords(wi, dwi_du_cur, dwi_dv_cur);
+                std::tie(dtoi_du, dpoi_du, dtoi_dv, dpoi_dv) = SpecularManifold::d_sphcoords(woi, dwoi_du_cur, dwoi_dv_cur);
+
+                v[i].dC_dx_cur(0,0) = dti_du - dtoi_du;
+                v[i].dC_dx_cur(1,0) = dpi_du - dpoi_du;
+                v[i].dC_dx_cur(0,1) = dti_dv - dtoi_dv;
+                v[i].dC_dx_cur(1,1) = dpi_dv - dpoi_dv;
+
+                // Derivative of specular constraint w.r.t. x_{i+1}
+                if (i < k-1) {
+                    // Vector3f dwi_du_next = ili * (v[i+1].dp_du - wi*dot(wi, v[i+1].dp_du)),  // = 0
+                    // dwi_dv_next = ili * (v[i+1].dp_dv - wi*dot(wi, v[i+1].dp_dv));  // = 0
+                    Vector3f dwo_du_next = ilo * (v[i+1].dp_du - wo*dot(wo, v[i+1].dp_du)),
+                             dwo_dv_next = ilo * (v[i+1].dp_dv - wo*dot(wo, v[i+1].dp_dv));
+                    auto [dwoi_du_next, dwoi_dv_next] = d_transform(wo, dwo_du_next, dwo_dv_next, n, Vector3f(0.f), Vector3f(0.f), v[i].eta);   // Possible optimization: specific implementation here that already knows some of these are 0.
+
+                    // std::tie(dti_du, dpi_du, dti_dv, dpi_dv)  = SpecularManifold::d_sphcoords(wi, dwi_du_next, dwi_dv_next);  // = 0
+                    std::tie(dtoi_du, dpoi_du, dtoi_dv, dpoi_dv) = SpecularManifold::d_sphcoords(woi, dwoi_du_next, dwoi_dv_next);
+
+                    v[i].dC_dx_next(0,0) = -dtoi_du;
+                    v[i].dC_dx_next(1,0) = -dpoi_du;
+                    v[i].dC_dx_next(0,1) = -dtoi_dv;
+                    v[i].dC_dx_next(1,1) = -dpoi_dv;
+                }
+
+                success_i = true;
+            }
+
+            success &= success_i;
+        }
+
+        if (!success || !invert_tridiagonal_step(v)) {
+            return false;
+        }
+        return true;
+    }
+
+
     /* +===============================================================================================+
     // |                                           GUIDE RAY                                           |
     // +===============================================================================================+ */
