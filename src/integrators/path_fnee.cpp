@@ -210,7 +210,8 @@ public:
             }; // needs local coordinates
 
             auto [FNEE_success, fermat_connection_direction] =
-                NEE_sampler.specular_connection(si, vy, &fermat_connection_data);
+                NEE_sampler.specular_connection(si, vy,
+                                                &fermat_connection_data);
             r.d = fermat_connection_direction;
             r.update();
 
@@ -242,95 +243,6 @@ public:
                 }
             }
         }
-
-        // /* +-------------+
-        // // |// reflection|
-        // // +-------------+ */
-        // H1                        = nullptr;
-        // H2                        = nullptr;
-        // Float invPdf_H_sampling = 0;
-        // sample_heighfield_success =
-        // NEE_sampler.sample_heightfield(&H1, &invPdf_H_sampling,
-        // active); if (sample_heighfield_success) {
-        //     // TODO gerer direction sample
-        //     typename SpecularManifold::EmitterInteraction vy =
-        //     SpecularManifold::sample_emitter_interaction(si,
-        //     scene->caustic_emitters_multi_scatter(), sampler);
-        //     Float NEE_invpdf                      = 1.0f;
-        //     Point3f S                             =
-        //     H1->get_local_transform().transform_affine(vy.p);
-        //     Point3f O                             =
-        //     H1->get_local_transform().transform_affine(si.p);
-
-        //     Vector3f wo_r = normalize(vy.p - si.p);
-        //     // Ray3f r(si.p, wo_r, math::RayEpsilon<Float> * (1.f
-        //     + hmax(abs(si.p))),
-        //     //                     math::Infinity<Float>,
-        //     si.time, si.wavelengths); Ray3f r; r.o    = si.p;
-        //     r.mint = math::RayEpsilon<Float> * (1.f +
-        //     hmax(abs(si.p))); r.time = si.time;
-
-        //     // find ray proposal
-        //     typename FermatNEE::L_data_float
-        //     fermat_connection_data = { H1,
-        //                                                                 nullptr,
-        //                                                                 H1->eval_attribute_1("H",
-        //                                                                 si),
-        //                                                                 0.f,
-        //                                                                 H1->eval_attribute_1("L",
-        //                                                                 si),
-        //                                                                 0.f,
-        //                                                                 H1->eval_attribute_1("W",
-        //                                                                 si),
-        //                                                                 0.f,
-        //                                                                 O,
-        //                                                                 S,
-        //                                                                 1.00f,
-        //                                                                 0.0f,
-        //                                                                 0.0f
-        //                                                                 };
-
-        //     Vector3f fermat_connection_direction;
-        //     bool FNEE_success   = false;
-        //     bool use_two_stages = false;
-
-        //     FNEE_success =
-        //     NEE_sampler.fermat_connection_reflection(&fermat_connection_data,
-        //     &fermat_connection_direction); if (FNEE_success) {
-
-        //         r.d =
-        //         H1->get_world_transform().transform_affine(fermat_connection_direction);
-        //         r.d = normalize(r.d);
-        //         r.update();
-
-        //         Vector3f wo_bsdf            = (si.to_local(r.d));
-        //         Spectrum bsdf_shading_point =
-        //         si.bsdf()->eval(ctx, si, wo_bsdf);
-        //         bsdf_shading_point          =
-        //         si.to_world_mueller(bsdf_shading_point, -wo_bsdf,
-        //         si.wi);
-
-        //         NEE_specularOutput =
-        //             NEE_sampler.compute_ray_contribution_reflection(si,
-        //             ctx, r, vy, 1.0f, 1.54f, H1, nullptr,
-        //             active);
-
-        //         if (NEE_specularOutput != Spectrum(0)) {
-
-        //             NEE_invpdf     =
-        //             NEE_sampler.eval_invPDF_reflection(&fermat_connection_data,
-        //             fermat_connection_direction); Vector3f wo =
-        //             (si.to_local(r.d)); Float bsdf_pdf =
-        //             bsdf->pdf(ctx, si, wo, active); Float mis =
-        //             mis_weight(vy.pdf, bsdf_pdf);
-
-        //             result[active] += throughput *
-        //             bsdf_shading_point * vy.weight *
-        //             NEE_specularOutput * NEE_invpdf *
-        //             invPdf_H_sampling; // *NEE_invpdf
-        //         }
-        //     }
-        // }
     }
 
     std::pair<Spectrum, Mask> sample(const Scene *scene, Sampler *sampler,
@@ -339,14 +251,13 @@ public:
                                      Float * /* aovs */,
                                      Mask active) const override {
         MTS_MASKED_FUNCTION(ProfilerPhase::SamplingIntegratorSample, active);
-        // auto &mf_ms       = (SpecularManifoldMultiScatter_AG &) tl_manifold;
         FermatNEE &NEE_sampler = (FermatNEE &) tl_fermaNEE;
-        // mf_ms.init(scene, m_sms_config);
         NEE_sampler.init(scene, sampler, m_sms_config.uniqueness_threshold,
                          m_sms_config.max_trials, alpha, beta, crop_caustic,
                          m_sms_config, use_SMS);
 
         RayDifferential3f ray = ray_;
+
         // Tracks radiance scaling due to index of refraction changes
         Float eta(1.f);
 
