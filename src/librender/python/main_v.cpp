@@ -79,7 +79,7 @@ MTS_PY_DECLARE(SpecularManifold);
 MTS_PY_DECLARE(SpecularManifoldSingleScatter);
 MTS_PY_DECLARE(SpecularManifoldMultiScatter);
 MTS_PY_DECLARE(SpecularManifoldGlints);
-MTS_PY_DECLARE(fermatNEE);
+MTS_PY_DECLARE(FermatNEE);
 
 PYBIND11_MODULE(MODULE_NAME, m) {
     // Temporarily change the module name (for pydoc)
@@ -120,7 +120,7 @@ PYBIND11_MODULE(MODULE_NAME, m) {
     MTS_PY_IMPORT(SpecularManifoldSingleScatter);
     MTS_PY_IMPORT(SpecularManifoldMultiScatter);
     MTS_PY_IMPORT(SpecularManifoldGlints);
-    MTS_PY_IMPORT(fermatNEE);
+    MTS_PY_IMPORT(FermatNEE);
 
     /// Register the variant-specific caster with the 'core_ext' module
     auto casters = (std::vector<void *> *) (py::capsule)(

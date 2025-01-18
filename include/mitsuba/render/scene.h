@@ -121,7 +121,7 @@ public:
      *    Radiance received along the sampled ray divided by the sample
      *    probability.
      */
-        std::pair<DirectionSample3f, Spectrum> sample_emitter_direction_double_refraction(fermatNEE<Float,Spectrum> *NEE_sampler,const BSDFContext &ctx,const SurfaceInteraction3f &ref, const Point2f &sample_, const Point2f &sample2_,
+        std::pair<DirectionSample3f, Spectrum> sample_emitter_direction_double_refraction(FermatNEE<Float,Spectrum> *NEE_sampler,const BSDFContext &ctx,const SurfaceInteraction3f &ref, const Point2f &sample_, const Point2f &sample2_,
                                                                   const Float &sample3_, bool useSMS, bool *foundDoubleRefraction,
                                                                   ShapePtr *heightfield1, ShapePtr *heightfield2, Mask active) const;
     bool test_double_refraction_NEE(const BSDFContext &ctx, const SurfaceInteraction3f &ref, Vector3f wo, Point3f S, ShapePtr *H1, ShapePtr *H2, Mask active, const Point2f &sample2_, const Float &sample3_ ) const;

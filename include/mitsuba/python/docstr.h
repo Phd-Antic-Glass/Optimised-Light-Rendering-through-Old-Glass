@@ -6470,11 +6470,11 @@ covariance matrix)doc";
 static const char *__doc_mitsuba_SpecularManifold_sphcoords = R"doc()doc";
 
 
-static const char *__doc_mitsuba_fermatNEE = R"doc()doc";
+static const char *__doc_mitsuba_FermatNEE = R"doc()doc";
 
-static const char *__doc_mitsuba_fermatNEE_init = R"doc(initialize fermaNEE sampler)doc";
+static const char *__doc_mitsuba_FermatNEE_init = R"doc(initialize fermaNEE sampler)doc";
 
-static const char *__doc_mitsuba_fermatNEE_fermat_connection = R"doc(Compute a direction through which a ray can connect two points)doc";
+static const char *__doc_mitsuba_FermatNEE_fermat_connection = R"doc(Compute a direction through which a ray can connect two points)doc";
 
 
 static const char *__doc_mitsuba_Spiral =

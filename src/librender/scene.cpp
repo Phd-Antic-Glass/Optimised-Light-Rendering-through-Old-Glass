@@ -208,7 +208,7 @@ Scene<Float, Spectrum>::sample_emitter_direction(const Interaction3f &ref, const
 // TODO move sampling in fermaNEE.cpp
 MTS_VARIANT
 std::pair<typename Scene<Float, Spectrum>::DirectionSample3f, Spectrum> Scene<Float, Spectrum>::sample_emitter_direction_double_refraction(
-    fermatNEE<Float, Spectrum> *NEE_sampler, const BSDFContext &ctx, const SurfaceInteraction3f &ref, const Point2f &sample_,
+    FermatNEE<Float, Spectrum> *NEE_sampler, const BSDFContext &ctx, const SurfaceInteraction3f &ref, const Point2f &sample_,
     const Point2f &sample2_, const Float &sample3_, bool useSMS, bool *foundDoubleRefraction, ShapePtr *heightfield1,
     ShapePtr *heightfield2, Mask active) const {
     MTS_MASKED_FUNCTION(ProfilerPhase::SampleEmitterDirection, active);
