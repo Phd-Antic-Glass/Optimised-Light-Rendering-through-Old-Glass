@@ -275,8 +275,8 @@ def build_heightfield_scene():
     Textures = [[Texture_flat, Texture_cive_1], [Texture_flat, Texture_manchon_1], [
         Texture_flat, Texture_cive_2], [Texture_flat, Texture_simplex]]
 
-    H = [[0, 0.0], [0, 0.0], [0, 0.0], [0, 0.0]] # flat window
-#      H = [[0, 0.01], [0, 0.001], [0, 0.001], [0, 0.001]] # displaced windows
+#      H = [[0, 0.0], [0, 0.0], [0, 0.0], [0, 0.0]] # flat window
+    H = [[0, 0.01], [0, 0.001], [0, 0.001], [0, 0.001]] # displaced windows
 
     e = 0.02 # glass panel thickness
 

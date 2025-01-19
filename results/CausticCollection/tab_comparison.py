@@ -130,13 +130,13 @@ def nb_eval(Heightfields):
 
 ## fermat solver
 mf = FermatNEE()
-mf.init(scene, sampler, 1e-5, 1000, 0.5, 0.8, True, sms_config, False)
+mf.init(scene, sampler, 1e-5, 1000, 0.5, 0.5, True, sms_config, False)
 cond_fnee, success_FNEE, unique_solution_number_FNEE = gather(mf)
 FNEE_eval = nb_eval(scene.caustic_casters_double_refraction())
 
 # sms solver
 mf = FermatNEE()
-mf.init(scene, sampler, 1e-5, 1000, 0.5, 0.8, True, sms_config, True)
+mf.init(scene, sampler, 1e-5, 1000, 0.5, 0.5, True, sms_config, True)
 cond_sms, success_SMS, unique_solution_number_SMS = gather(mf)
 SMS_eval = nb_eval(scene.caustic_casters_double_refraction())
 
