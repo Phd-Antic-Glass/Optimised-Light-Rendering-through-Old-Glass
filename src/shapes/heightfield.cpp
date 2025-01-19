@@ -718,7 +718,7 @@ public:
         MTS_MASK_ARGUMENT(active);
         SurfaceInteraction3f si;
         Float f = eval_texture(0, p);
-        si.p = m_to_world.transform_affine(Point3f(-f, p.x() * L, p.y() * W));
+        si.p = m_to_world.transform_affine(Point3f(f, p.x() * L, p.y() * W));
 
         Vector3f grad_local = grad_h(p, active);
         si.n = m_to_world * normalize(flip * grad_local);

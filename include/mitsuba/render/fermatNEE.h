@@ -524,13 +524,13 @@ public:
 
     std::tuple<bool, Vector3f>
     fermat_connection(SurfaceInteraction3f &si, const EmitterInteraction &ei,
-                      L_data_float *data, Vector4f init = Vector4f(-1)) const;
+                      L_data_float *data, Vector4f init) const;
 
     Float eval_invPDF(L_data_float *data, Vector3f &proposal) const;
 
     std::tuple<bool, Vector3f> SMS_connection(SurfaceInteraction3f &si,
                                               const EmitterInteraction &ei,
-                                              L_data_float *data, Vector4f init=Vector4f(-1));
+                                              L_data_float *data, Vector4f init);
 
     Float SMS_eval_invPDF(SurfaceInteraction3f &si,
                           const EmitterInteraction &ei, L_data_float *data,

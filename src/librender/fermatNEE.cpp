@@ -1422,7 +1422,7 @@ Float FermatNEE<Float, Spectrum>::SMS_eval_invPDF(SurfaceInteraction3f &si,
     Float inv_pdf = 0.f;
     while (1) {
         inv_pdf += 1.f;
-        auto [success, result] = SMS_connection(si, ei, data);
+        auto [success, result] = SMS_connection(si, ei, data, Vector4f(-1));
         if (success) {
             float diff = abs(dot(proposal, result) - 1.f);
             if (diff < m_config.uniqueness_threshold)

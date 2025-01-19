@@ -225,20 +225,21 @@ public:
                 NEE_specularOutput = NEE_sampler.compute_ray_contribution(
                     si, ctx, r, vy, 1.0f, 1.54f, H1, H2, active);
 
-                if (NEE_specularOutput != Spectrum(0)) {
-                    if (!use_SMS) {
-                        NEE_invpdf = NEE_sampler.eval_invPDF(
-                            &fermat_connection_data,
-                            fermat_connection_direction);
-
-                    } else {
-                        NEE_invpdf = NEE_sampler.SMS_eval_invPDF(
-                            si, vy, &fermat_connection_data,
-                            fermat_connection_direction);
-                    }
-
-                    result[active] += throughput * bsdf_shading_point * vy.weight * NEE_specularOutput * NEE_invpdf;
-                }
+                    result[active] += 1.f;
+                // if (NEE_specularOutput != Spectrum(0)) {
+                //     if (!use_SMS) {
+                //         NEE_invpdf = NEE_sampler.eval_invPDF(
+                //             &fermat_connection_data,
+                //             fermat_connection_direction);
+                //
+                //     } else {
+                //         NEE_invpdf = NEE_sampler.SMS_eval_invPDF(
+                //             si, vy, &fermat_connection_data,
+                //             fermat_connection_direction);
+                //     }
+                //
+                //     result[active] += throughput * bsdf_shading_point * vy.weight * NEE_specularOutput * NEE_invpdf;
+                // }
             }
         }
     }
