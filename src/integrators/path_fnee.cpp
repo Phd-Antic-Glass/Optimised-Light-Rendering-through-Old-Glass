@@ -219,8 +219,8 @@ public:
                 Vector3f wo_bsdf = (si.to_local(r.d));
 
                 Spectrum bsdf_shading_point = si.bsdf()->eval(ctx, si, wo_bsdf);
-                bsdf_shading_point =
-                    si.to_world_mueller(bsdf_shading_point, -wo_bsdf, si.wi);
+                // bsdf_shading_point =
+                //     si.to_world_mueller(bsdf_shading_point, -wo_bsdf, si.wi);
 
                 NEE_specularOutput = NEE_sampler.compute_ray_contribution(
                     si, ctx, r, vy, 1.0f, 1.54f, H1, H2, active);
@@ -237,9 +237,7 @@ public:
                             fermat_connection_direction);
                     }
 
-                    result[active] += throughput * bsdf_shading_point *
-                                      vy.weight * NEE_specularOutput *
-                                      NEE_invpdf;
+                    result[active] += throughput * bsdf_shading_point * vy.weight * NEE_specularOutput * NEE_invpdf;
                 }
             }
         }

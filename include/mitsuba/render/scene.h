@@ -191,6 +191,9 @@ public:
     /// Return the list of shapes that allow (multi-bounce) specular manifold sampling (const version)
     const std::vector<ref<Shape>> &caustic_casters_multi_scatter() const { return m_caustic_casters_multi; }
 
+    /// Return list of shapes that allow double refraction specular sampling
+    std::vector<ref<Shape>> &caustic_casters_double_refraction() { return m_caustic_casters_double_refraction; }
+    /// const version
     const std::vector<ref<Shape>> &caustic_casters_double_refraction() const { return m_caustic_casters_double_refraction; }
 
 

@@ -302,8 +302,8 @@ bool FermatNEE<Float, Spectrum>::newton_solver_SMS(
         // Project back to surfaces
         bool project_success = reproject_raytrace(si);
 
-        // orthogonal reprojection, just for the sake of showing that it doesn't work
-        // bool project_success = reproject(si, data);
+        // orthogonal reprojection, just for the sake of showing that it doesn't
+        // work bool project_success = reproject(si, data);
 
         if (!project_success) {
             beta = 0.5f * beta;
@@ -1288,11 +1288,12 @@ template <typename Float, typename Spectrum>
 std::tuple<bool, typename FermatNEE<Float, Spectrum>::Vector3f>
 FermatNEE<Float, Spectrum>::specular_connection(SurfaceInteraction3f &si,
                                                 const EmitterInteraction &ei,
-                                                L_data_float *data) {
+                                                L_data_float *data,
+                                                Vector4f init) {
     if (m_use_SMS) {
-        return SMS_connection(si, ei, data);
+        return SMS_connection(si, ei, data, init);
     } else {
-        return fermat_connection(si, ei, data);
+        return fermat_connection(si, ei, data, init);
     }
 }
 
@@ -1300,14 +1301,19 @@ template <typename Float, typename Spectrum>
 std::tuple<bool, typename FermatNEE<Float, Spectrum>::Vector3f>
 FermatNEE<Float, Spectrum>::fermat_connection(SurfaceInteraction3f &si,
                                               const EmitterInteraction &ei,
-                                              L_data_float *data) const {
+                                              L_data_float *data,
+                                              Vector4f init) const {
     ScopedPhase scope_phase(ProfilerPhase::FermaNEE_principal);
 
     // make data
     // initial value
-    Array<Float, 4> X =
-        Array<Float, 4>(m_sampler->next_1d(), m_sampler->next_1d(),
-                        m_sampler->next_1d(), m_sampler->next_1d());
+    Array<Float, 4> X(0);
+    if (init == Vector4f(-1)) {
+        X = Array<Float, 4>(m_sampler->next_1d(), m_sampler->next_1d(),
+                            m_sampler->next_1d(), m_sampler->next_1d());
+    } else {
+        X = init;
+    }
     Float f_out = 0.0f;
 
     bool success = newton_solver_double(&X, data, &f_out);
@@ -1358,7 +1364,7 @@ template <typename Float, typename Spectrum>
 std::tuple<bool, typename FermatNEE<Float, Spectrum>::Vector3f>
 FermatNEE<Float, Spectrum>::SMS_connection(SurfaceInteraction3f &si,
                                            const EmitterInteraction &ei,
-                                           L_data_float *data) {
+                                           L_data_float *data, Vector4f init) {
 
     ScopedPhase scope_phase(ProfilerPhase::FermaNEE_principal);
 
@@ -1367,15 +1373,25 @@ FermatNEE<Float, Spectrum>::SMS_connection(SurfaceInteraction3f &si,
     m_seed_path.clear();
     m_offset_normals.clear();
 
-    // point X1
-    Point2f uv_1(m_sampler->next_1d(), m_sampler->next_1d());
+    Point2f uv_1(0);
+    Point2f uv_2(0);
+    // random init
+    if(init == Vector4f(-1)){
+        uv_1= Point2f(m_sampler->next_1d(), m_sampler->next_1d());
+        uv_2= Point2f(m_sampler->next_1d(), m_sampler->next_1d());
+    }else{
+        uv_1=Point2f(init.x(), init.y());
+        uv_2=Point2f(init.z(), init.w());
+
+    }
     ManifoldVertex x1 = manifoldVertex_from_uv(uv_1, data->pH1, si);
+    ManifoldVertex x2 = manifoldVertex_from_uv(uv_2, data->pH2, si);
+
+    // point X1
     m_current_path.push_back(x1);
     m_seed_path.push_back(x1);
 
     // point X2
-    Point2f uv_2(m_sampler->next_1d(), m_sampler->next_1d());
-    ManifoldVertex x2 = manifoldVertex_from_uv(uv_2, data->pH2, si);
     m_current_path.push_back(x2);
     m_seed_path.push_back(x2);
 
@@ -1385,7 +1401,6 @@ FermatNEE<Float, Spectrum>::SMS_connection(SurfaceInteraction3f &si,
     m_offset_normals.push_back(n_offset);
 
     /// newton_solver
-    Float f_out = 0.0f;
     bool success = newton_solver_SMS(si, ei, data);
 
     if (!success)
@@ -1421,38 +1436,32 @@ Float FermatNEE<Float, Spectrum>::SMS_eval_invPDF(SurfaceInteraction3f &si,
 
 template <typename Float, typename Spectrum>
 std::pair<bool, typename FermatNEE<Float, Spectrum>::Vector3f>
-FermatNEE<Float, Spectrum>::fermat_connection_(SurfaceInteraction3f &si,
-                                               const EmitterInteraction &vy,
-                                               Point2f init, ShapePtr shape,
-                                               Float H_out) const {
+FermatNEE<Float, Spectrum>::specular_connection_debug(
+    SurfaceInteraction3f &si, const EmitterInteraction &vy, Vector4f init) {
+        
     ShapePtr H1;
     ShapePtr H2;
     Float e = 0;
-    if (shape != nullptr) {
-        H1 = shape;
-        H2 = shape;
-    } else {
-        Float sample_heightfield_invpdf = 0.0f;
-        bool sample_heighfield_success =
-            sample_heightfield_pair(&H1, &H2, &sample_heightfield_invpdf, true);
+    Float sample_heightfield_invpdf = 0.0f;
+    bool sample_heighfield_success =
+        sample_heightfield_pair(&H1, &H2, &sample_heightfield_invpdf, true);
 
-        Point3f origin_H1 =
-            H1->get_world_transform().transform_affine(Point3f(0.f));
-        Point3f origin_H2 =
-            H2->get_world_transform().transform_affine(Point3f(0.f));
-        Point3f origin_H2_local_H1 =
-            H1->get_local_transform().transform_affine(origin_H2);
-        Point3f O_local_H1 = H1->get_local_transform().transform_affine(si.p);
-        e = origin_H2_local_H1.x();
+    Point3f origin_H1 =
+        H1->get_world_transform().transform_affine(Point3f(0.f));
+    Point3f origin_H2 =
+        H2->get_world_transform().transform_affine(Point3f(0.f));
+    Point3f origin_H2_local_H1 =
+        H1->get_local_transform().transform_affine(origin_H2);
+    Point3f O_local_H1 = H1->get_local_transform().transform_affine(si.p);
+    e = origin_H2_local_H1.x();
 
-        if (squared_norm(O_local_H1) >
-            squared_norm(O_local_H1 - origin_H2_local_H1)) {
-            std::swap(H1, H2);
-            e = -e;
-        }
-        if (!sample_heighfield_success)
-            return { false, Vector3f(0) };
+    if (squared_norm(O_local_H1) >
+        squared_norm(O_local_H1 - origin_H2_local_H1)) {
+        std::swap(H1, H2);
+        e = -e;
     }
+    if (!sample_heighfield_success)
+        return { false, Vector3f(0) };
 
     Float NEE_invpdf = 1.0f;
     Point3f S = H1->get_local_transform().transform_affine(vy.p);
@@ -1481,21 +1490,7 @@ FermatNEE<Float, Spectrum>::fermat_connection_(SurfaceInteraction3f &si,
         e
     };
 
-    Vector3f fermat_connection_direction;
-    Matrix<double, 2> H;
-    Float obj = 0.f;
-    if (fermat_connection_reflection(&fermat_connection_data,
-                                     &fermat_connection_direction, &obj, init,
-                                     &H)) {
-        fermat_connection_direction =
-            H1->get_world_transform().transform_affine(
-                fermat_connection_direction);
-        Float f = (Float) (frob(H) * frob(inverse(H)));
-        if (H_out != 0)
-            fermat_connection_direction = Vector3f(f, 0, 0);
-        return { true, fermat_connection_direction };
-    } else
-        return { false, Vector3f(0) };
+    return specular_connection(si, vy, &fermat_connection_data, init);
 }
 
 template <typename Float, typename Spectrum>
@@ -1701,101 +1696,6 @@ typename FermatNEE<Float, Spectrum>::Mask FermatNEE<Float, Spectrum>::reproject(
     return true;
 }
 
-// +==============================================================================+
-// |                                   Sampling |
-// +==============================================================================+
-// template <typename Float, typename Spectrum>
-// typename FermatNEE<Float, Spectrum>::EmitterInteraction FermatNEE<Float,
-// Spectrum>::sample_emitter(SurfaceInteraction3f &si,
-//                                                                                                Mask active) const {
-//     MTS_MASKED_FUNCTION(ProfilerPhase::SampleEmitterDirection, active);
-//     using EmitterPtr = typename RenderAliases::EmitterPtr;
-
-//     Point2f sample = m_sampler->next_2d();
-//     Spectrum spec(1.0f);
-//     auto m_emitters = m_scene->emitters();
-
-//     if (likely(!m_emitters.empty())) {
-
-//         // emitter sampling:
-//         // Uniformly sample an emitter, same as in
-//         Scene::sample_emitter_direction Float emitter_sample     =
-//         sample.x(); Float emitter_pdf        = 1.f / m_emitters.size();
-//         UInt32 index             = min(UInt32(emitter_sample * (ScalarFloat)
-//         m_emitters.size()), (uint32_t) m_emitters.size() - 1); const
-//         EmitterPtr emitter = gather<EmitterPtr>(m_emitters.data(), index);
-
-//         Spectrum ei_weight(0.f);
-//         DirectionSample3f ds;
-//         EmitterInteraction vy;
-
-//         /* +------------+
-//         // |area emitter|
-//         // +------------+ */
-//         if (has_flag(emitter->flags(), EmitterFlags::Surface)) {
-//             const ShapePtr shape = emitter->shape();
-//             ds                   = shape->sample_position(si.time, sample);
-
-//             SurfaceInteraction3f si_emitter;
-//             si_emitter.p           = si.p;
-//             si_emitter.n           = si.n;
-//             si_emitter.wi          = Vector3f(0.f, 0.f, 1.f);
-//             si_emitter.wavelengths = si.wavelengths;
-//             si_emitter.time        = si.time;
-//             ds.object              = shape;
-//             if (ds.pdf > 0) {
-//                 vy.weight  = rcp(ds.pdf) * rcp(emitter_pdf) *
-//                 emitter->eval(si_emitter);
-//             }
-//         }
-
-//         /* +--------------------+
-//         // |directionnal emitter|
-//         // +--------------------+ */
-//         else if (has_flag(emitter->flags(), EmitterFlags::DeltaDirection) ||
-//         has_flag(emitter->flags(), EmitterFlags::Infinite)) {
-//             std::tie(ds, spec) = emitter->sample_direction(si, sample,
-//             active); if (ds.pdf > 0) {
-//                 vy.ds             = ds;
-//                 vy.weight         = rcp(ds.pdf) * rcp(emitter_pdf) * spec;
-//                 // std::cout << "direction emitter" << ds << std::endl;
-//             }
-//         }
-
-//         /* +-------------+
-//         // |point emitter|
-//         // +-------------+ */
-//         else if (has_flag(emitter->flags(), EmitterFlags::DeltaPosition)) {
-//             std::tie(ds, spec) = emitter->sample_direction(si, sample,
-//             active); if (ds.pdf > 0) {
-//                 vy.ds             = ds;
-//                 vy.weight         = rcp(ds.pdf) * rcp(emitter_pdf) * spec;
-//                 vy.weight *= ds.dist * ds.dist; // done in geometric term
-//             }
-//         }
-
-//         /* +------------+
-//         // |delta emiter|
-//         // +------------+ */
-//         else if (has_flag(emitter->flags(), EmitterFlags::DeltaPosition) ||
-//         has_flag(emitter->flags(), EmitterFlags::DeltaDirection)) {
-
-//             std::cout << "delta emitter sampling FermaNEE: not implemented
-//             yet" << std::endl;
-//         } else {
-//             std::cout << "sampling FermaNEE: not implemented yet" <<
-//             std::endl;
-//         }
-
-//         return vy;
-//     }
-// }
-
-/* +===============================================================================================+
-// |                                           SAMPLING |
-//
-+===============================================================================================+
-*/
 template <typename Float, typename Spectrum>
 bool FermatNEE<Float, Spectrum>::sample_heightfield_pair(ShapePtr *H1,
                                                          ShapePtr *H2,

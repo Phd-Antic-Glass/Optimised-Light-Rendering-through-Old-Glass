@@ -520,28 +520,27 @@ public:
     // next event estimation through double refraction event
     std::tuple<bool, Vector3f> specular_connection(SurfaceInteraction3f &si,
                                                    const EmitterInteraction &ei,
-                                                   L_data_float *data);
+                                                   L_data_float *data, Vector4f init=Vector4f(-1));
 
-    std::tuple<bool, Vector3f> fermat_connection(SurfaceInteraction3f &si,
-                                                 const EmitterInteraction &ei,
-                                                 L_data_float *data) const;
+    std::tuple<bool, Vector3f>
+    fermat_connection(SurfaceInteraction3f &si, const EmitterInteraction &ei,
+                      L_data_float *data, Vector4f init = Vector4f(-1)) const;
 
     Float eval_invPDF(L_data_float *data, Vector3f &proposal) const;
 
     std::tuple<bool, Vector3f> SMS_connection(SurfaceInteraction3f &si,
                                               const EmitterInteraction &ei,
-                                              L_data_float *data);
+                                              L_data_float *data, Vector4f init=Vector4f(-1));
 
     Float SMS_eval_invPDF(SurfaceInteraction3f &si,
                           const EmitterInteraction &ei, L_data_float *data,
                           Vector3f &proposal);
 
     // python debug
-    std::pair<bool, Vector3f> fermat_connection_(SurfaceInteraction3f &si,
-                                                 const EmitterInteraction &vy,
-                                                 Point2f init = Point2f(-1, -1),
-                                                 ShapePtr shape = nullptr,
-                                                 Float H_out = 0) const;
+    std::pair<bool, Vector3f>
+    specular_connection_debug(SurfaceInteraction3f &si,
+                              const EmitterInteraction &vy,
+                              Vector4f init = Vector4f(-1));
 
     // naive connection with a straight line
     Ray3f straighline_approx(ShapePtr H1, ShapePtr H2, Point3f O, Point3f S,

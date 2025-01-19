@@ -345,6 +345,8 @@ public:
             return inv_partition_area;
         else if (name == "N")
             return Float(N);
+        else if (name == "nbEval")
+            return Float(nbEval);
         else
             return 0.0f;
     }
@@ -415,10 +417,12 @@ public:
 
     int get_self_id(Mask /*active*/) const override { return m_self_id; }
 
-    // TODO refactor
     Float eval_texture(int index, Point2f p,
                        Mask active = true) const override {
         MTS_MASK_ARGUMENT(active);
+
+
+        // nbEval++;
         if (index == 0) {
             // return h_f(p, active);
             return -H * bicubic(p, active, index);
@@ -714,7 +718,7 @@ public:
         MTS_MASK_ARGUMENT(active);
         SurfaceInteraction3f si;
         Float f = eval_texture(0, p);
-        si.p = m_to_world.transform_affine(Point3f(f, p.x() * L, p.y() * W));
+        si.p = m_to_world.transform_affine(Point3f(-f, p.x() * L, p.y() * W));
 
         Vector3f grad_local = grad_h(p, active);
         si.n = m_to_world * normalize(flip * grad_local);
@@ -912,7 +916,9 @@ private:
     ref<Texture> heightmap;
     Array<Float, 16> *cubic_coefs;
     Float partition_size, inv_partition_size, inv_partition_area;
-    mutable long nbEvall;
+
+    // number of heighfield evaluation
+    mutable long nbEval;
 };
 
 MTS_IMPLEMENT_CLASS_VARIANT(Heightfield, Shape)

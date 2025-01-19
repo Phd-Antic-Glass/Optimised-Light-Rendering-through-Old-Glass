@@ -5340,6 +5340,10 @@ static const char *__doc_mitsuba_Scene_caustic_emitters_single_scatter_2 =
 R"doc(Return the list of emitters that allow (single-bounce) specular
 manifold sampling (const version))doc";
 
+static const char *__doc_mitsuba_Scene_caustic_casters_double_refraction =
+R"doc(Return the list of shapes that allow (double-bounce) specular
+sampling)doc";
+
 static const char *__doc_mitsuba_Scene_class = R"doc()doc";
 
 static const char *__doc_mitsuba_Scene_emitters = R"doc(Return the list of emitters)doc";

@@ -55,7 +55,8 @@ MTS_PY_EXPORT(Shape) {
         .def("sensor", py::overload_cast<>(&Shape::sensor, py::const_))
         .def("bsdf", py::overload_cast<>(&Shape::bsdf, py::const_))
         .def_method(Shape, primitive_count)
-        .def_method(Shape, effective_primitive_count);
+        .def_method(Shape, effective_primitive_count)
+        .def("eval_attribute_1", &Shape::eval_attribute_1, "name"_a, "si"_a,"active"_a=true);
 
     using ScalarSize = typename Mesh::ScalarSize;
     MTS_PY_CLASS(Mesh, Shape)
