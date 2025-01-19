@@ -1307,13 +1307,15 @@ FermatNEE<Float, Spectrum>::fermat_connection(SurfaceInteraction3f &si,
 
     // make data
     // initial value
-    Array<Float, 4> X(0);
-    if (init == Vector4f(-1)) {
-        X = Array<Float, 4>(m_sampler->next_1d(), m_sampler->next_1d(),
-                            m_sampler->next_1d(), m_sampler->next_1d());
-    } else {
-        X = init;
-    }
+    Array<Float, 4> X =
+        Array<Float, 4>(m_sampler->next_1d(), m_sampler->next_1d(),
+                        m_sampler->next_1d(), m_sampler->next_1d());
+    // if (init == Vector4f(-1)) {
+    //     X = Array<Float, 4>(m_sampler->next_1d(), m_sampler->next_1d(),
+    //     m_sampler->next_1d(), m_sampler->next_1d());
+    // } else {
+    //     X = init;
+    // }
     Float f_out = 0.0f;
 
     bool success = newton_solver_double(&X, data, &f_out);
@@ -1373,17 +1375,19 @@ FermatNEE<Float, Spectrum>::SMS_connection(SurfaceInteraction3f &si,
     m_seed_path.clear();
     m_offset_normals.clear();
 
-    Point2f uv_1(0);
-    Point2f uv_2(0);
-    // random init
-    if(init == Vector4f(-1)){
-        uv_1= Point2f(m_sampler->next_1d(), m_sampler->next_1d());
-        uv_2= Point2f(m_sampler->next_1d(), m_sampler->next_1d());
-    }else{
-        uv_1=Point2f(init.x(), init.y());
-        uv_2=Point2f(init.z(), init.w());
+    Point2f uv_1 = Point2f(m_sampler->next_1d(), m_sampler->next_1d());
+    Point2f uv_2 = Point2f(m_sampler->next_1d(), m_sampler->next_1d());
 
-    }
+    // to be done
+    // random init
+    // if(init == Vector4f(-1)){
+    //     uv_1= Point2f(m_sampler->next_1d(), m_sampler->next_1d());
+    //     uv_2= Point2f(m_sampler->next_1d(), m_sampler->next_1d());
+    // }else{
+    //     uv_1=Point2f(init.x(), init.y());
+    //     uv_2=Point2f(init.z(), init.w());
+    //
+    // }
     ManifoldVertex x1 = manifoldVertex_from_uv(uv_1, data->pH1, si);
     ManifoldVertex x2 = manifoldVertex_from_uv(uv_2, data->pH2, si);
 
@@ -1438,7 +1442,7 @@ template <typename Float, typename Spectrum>
 std::pair<bool, typename FermatNEE<Float, Spectrum>::Vector3f>
 FermatNEE<Float, Spectrum>::specular_connection_debug(
     SurfaceInteraction3f &si, const EmitterInteraction &vy, Vector4f init) {
-        
+
     ShapePtr H1;
     ShapePtr H2;
     Float e = 0;
@@ -1490,7 +1494,19 @@ FermatNEE<Float, Spectrum>::specular_connection_debug(
         e
     };
 
-    return specular_connection(si, vy, &fermat_connection_data, init);
+    auto [success, result] =
+        specular_connection(si, vy, &fermat_connection_data, init);
+
+    BSDFContext ctx;
+    Spectrum NEE_specularOutput = compute_ray_contribution(
+        si, ctx, r, vy, 1.0f, 1.54f, H1, H2, true);
+
+    if(NEE_specularOutput != Spectrum(0.f) && success){
+        return {true, result};
+    }else{
+        return {false, result};
+
+    }
 }
 
 template <typename Float, typename Spectrum>
@@ -1616,7 +1632,8 @@ FermatNEE<Float, Spectrum>::reproject_raytrace(
 
         if (bounce >= m_config.bounces) {
             /* We reached the number of specular bounces that was requested.
-               (Implicitly) connect to the light source now by terminating. */
+               (Implicitly) connect to the light source now by terminating.
+             */
             break;
         }
 

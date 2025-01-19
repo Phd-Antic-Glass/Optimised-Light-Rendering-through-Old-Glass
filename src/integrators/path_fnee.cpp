@@ -130,7 +130,7 @@ public:
         m_sms_config.bounces = props.int_("bounces", 2);
 
         alpha = props.float_("alpha", 0.5f);
-        beta = props.float_("beta", 0.8f);
+        beta = props.float_("beta", 0.5f);
 
         crop_caustic = props.bool_("crop_caustic", false);
         use_SMS = props.bool_("use_SMS", false);
@@ -219,27 +219,26 @@ public:
                 Vector3f wo_bsdf = (si.to_local(r.d));
 
                 Spectrum bsdf_shading_point = si.bsdf()->eval(ctx, si, wo_bsdf);
-                // bsdf_shading_point =
-                //     si.to_world_mueller(bsdf_shading_point, -wo_bsdf, si.wi);
+                bsdf_shading_point =
+                    si.to_world_mueller(bsdf_shading_point, -wo_bsdf, si.wi);
 
                 NEE_specularOutput = NEE_sampler.compute_ray_contribution(
                     si, ctx, r, vy, 1.0f, 1.54f, H1, H2, active);
 
-                    result[active] += 1.f;
-                // if (NEE_specularOutput != Spectrum(0)) {
-                //     if (!use_SMS) {
-                //         NEE_invpdf = NEE_sampler.eval_invPDF(
-                //             &fermat_connection_data,
-                //             fermat_connection_direction);
-                //
-                //     } else {
-                //         NEE_invpdf = NEE_sampler.SMS_eval_invPDF(
-                //             si, vy, &fermat_connection_data,
-                //             fermat_connection_direction);
-                //     }
-                //
-                //     result[active] += throughput * bsdf_shading_point * vy.weight * NEE_specularOutput * NEE_invpdf;
-                // }
+                if (NEE_specularOutput != Spectrum(0)) {
+                    if (!use_SMS) {
+                        NEE_invpdf = NEE_sampler.eval_invPDF(
+                            &fermat_connection_data,
+                            fermat_connection_direction);
+
+                    } else {
+                        NEE_invpdf = NEE_sampler.SMS_eval_invPDF(
+                            si, vy, &fermat_connection_data,
+                            fermat_connection_direction);
+                    }
+
+                    result[active] += throughput * bsdf_shading_point * vy.weight * NEE_specularOutput * NEE_invpdf;
+                }
             }
         }
     }

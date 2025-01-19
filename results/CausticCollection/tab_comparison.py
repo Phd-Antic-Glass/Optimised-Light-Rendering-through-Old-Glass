@@ -69,17 +69,19 @@ scene = load_dict(scene_dict)
 
 def gather(mf):
     res=256
-    samples=10
+    samples=100
     cond = []
     failures = 0
     success_c = 0
     epsilon=1e-6
     solution_number=0
+    total_launch=0
     for i in range(0,res):
         print("gather: ",i,"/",res,end="\r")
         for j in range(0,res):
             solution_list=[]
             for r in range(samples):
+                total_launch = total_launch+1
                 ray, _ = camera.sample_ray_differential(0.0, sampler.next_1d(), [float(i)/float(res), float(j)/float(res)], [0.5, 0.5])
                 si = scene.ray_intersect(ray)
                 if(si.is_valid() and si.shape.is_caustic_receiver()):
@@ -103,7 +105,7 @@ def gather(mf):
             solution_number = solution_number + len(solution_list)
     print("\nDONE")
     total_iterations = res*res*samples
-    ratio_success = (float(success_c)/float(success_c+failures))
+    ratio_success = (float(success_c)/float(total_launch))
 
     return np.asarray(cond), ratio_success, solution_number
 
@@ -114,8 +116,8 @@ camera = load_dict(scene_dict["camera_1"])
 
 sms_config = SMSConfig()
 sms_config.max_iterations = 20
-sms_config.solver_threshold = 1e-5
-sms_config.uniqueness_threshold = 1e-6
+sms_config.solver_threshold = 1e-4
+sms_config.uniqueness_threshold = 1e-5
 sms_config.bounces = 2;
 sms_config.max_trials = 1000
 
@@ -123,18 +125,18 @@ sms_config.max_trials = 1000
 def nb_eval(Heightfields):
     c = 0.0
     for h in Heightfields:
-        c = c + h.eval_attribute_1("nbEvall", SurfaceInteraction3f(), True)*1e-6
+        c = c + h.eval_attribute_1("nbEval", SurfaceInteraction3f(), True)*1e-6
     return c
 
 ## fermat solver
 mf = FermatNEE()
-mf.init(scene, sampler, 1e-5, 1000, 0.45, 0.5, False, sms_config, False)
+mf.init(scene, sampler, 1e-5, 1000, 0.5, 0.8, True, sms_config, False)
 cond_fnee, success_FNEE, unique_solution_number_FNEE = gather(mf)
 FNEE_eval = nb_eval(scene.caustic_casters_double_refraction())
 
 # sms solver
 mf = FermatNEE()
-mf.init(scene, sampler, 1e-5, 1000, 0.45, 0.5, False, sms_config, True)
+mf.init(scene, sampler, 1e-5, 1000, 0.5, 0.8, True, sms_config, True)
 cond_sms, success_SMS, unique_solution_number_SMS = gather(mf)
 SMS_eval = nb_eval(scene.caustic_casters_double_refraction())
 

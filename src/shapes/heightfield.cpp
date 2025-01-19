@@ -422,7 +422,6 @@ public:
         MTS_MASK_ARGUMENT(active);
 
 
-        // nbEval++;
         if (index == 0) {
             // return h_f(p, active);
             return -H * bicubic(p, active, index);
@@ -469,6 +468,7 @@ public:
         MTS_MASK_ARGUMENT(active);
         ScopedPhase scope_phase(ProfilerPhase::Eval_heighfield);
 
+        nbEval++;
         // eval point is outside of heightfield definition domain
         if (p.x() > 1 || p.y() > 1 || p.x() < 0 || p.y() < 0) {
             return 0.0f;
