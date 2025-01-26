@@ -1,0 +1,15 @@
+# Blender MTL File: 'Palais.blend'
+# Material Count: 1
+
+newmtl Briques_Palace-SousBassement.001
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Bump /home/huan/Desktop/Palais de Cristal 2022-07-18/Briques_Palace-SousBassement_N.bmp
+map_Kd /home/huan/Desktop/Palais de Cristal 2022-07-18/Briques_Palace-SousBassement_D.bmp
+map_Ks /home/huan/Desktop/Palais de Cristal 2022-07-18/Briques_Palace-SousBassement_S.bmp
