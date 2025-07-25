@@ -1,18 +1,22 @@
 # Optimised-Light-Rendering-through-Old-Glass
 Implementation of the paper [Optimised Light Rendering through Old Glass](https://media.hal.science/LISIC/hal-04264368v1).
-This project was forked from the (Specular Manifold Sampling)[https://github.com/tizian/specular-manifold-sampling] (SMS) repository (Original README follows).
+This project was forked from the [Specular Manifold Sampling](https://github.com/tizian/specular-manifold-sampling) (SMS) repository (Original README follows).
 We propose a new specular connection strategy through a parametric piece of glass using Fermat's principle.
 This allows faster specular space exploration than SMS for this particular geometry.
 
-This implementation is designed with windows and deformed glass panels in mind, but other geometry may be supported.
+This implementation was designed with windows and deformed glass panels in mind, but other geometry may be supported.
 The main caveat of this method is that it does not support normal maps.
 It is however suited to implicit surfaces featuring some geometric displacements.
+
+## Modifications
 
 Most of the code is conserved, notable modifications include:
 
 * Implementation of a height field defined by a displaced signed distance field. The shape plugin can be found in `src/shapes/heightfield.cpp`.
 * Implementation of a custom integrator capable of computing transmitted caustics produced by a lighted panel of glass. The integrator plugin can be found in `src/integrators/path_fnee.cpp`. This integrator can also use manifold walk instead of Fermat's principle to find the admissible specular chains, which is useful to compare the two solvers.
 * Adding a few shadow ray casting routines in `src/librender/scene.cpp` for easy caustic caster selection.
+
+## Results
 
 The render comparisons and the tables of the paper can be reproduced by launching the scripts located in the `results/` folder.
 
